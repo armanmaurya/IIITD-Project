@@ -1,39 +1,159 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 const ResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const queryCondition = location.state?.queryCondition || {};
+  const results = location.state?.results || [];
+  96;
+
+  const [searchParams] = useSearchParams();
+
+  // Function to handle exporting to Excel
+  const exportToExcel = () => {
+    // Creating a table string that Excel can open
+    let tableHTML = "<table>";
+
+    // Add header row
+    tableHTML += "<tr>";
+    tableHTML += "<th>Student Name</th>";
+    tableHTML += "<th>ID</th>";
+    tableHTML += "<th>Class</th>";
+    tableHTML += "<th>Issue Date</th>";
+    tableHTML += "<th>Book Name</th>";
+    tableHTML += "<th>Author</th>";
+    tableHTML += "<th>Status</th>";
+    tableHTML += "</tr>";
+
+    // Add data rows
+    results.forEach((item) => {
+      tableHTML += "<tr>";
+      tableHTML += `<td>${item.FirstName || "-"}</td>`;
+      tableHTML += `<td>${item.StudentId || "-"}</td>`;
+      tableHTML += `<td>${item.Class || "-"}</td>`;
+      tableHTML += `<td>${item.IssueDate || "-"}</td>`;
+      tableHTML += `<td>${item.BookTitle || "-"}</td>`;
+      tableHTML += `<td>${item.Author || "-"}</td>`;
+      tableHTML += `<td>${item.Status || "-"}</td>`;
+      tableHTML += "</tr>";
+    });
+
+    tableHTML += "</table>";
+
+    // Create a Blob with the data and create a download link
+    const blob = new Blob([tableHTML], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "search_results.xls";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  /// Function to fetch results using GET request
+  const handleFetch = async () => {
+    setLoading(true);
+    try {
+      const queryString = searchParams.toString();
+      const response = await fetch(
+        `http://localhost:8000/api/students/?${queryString}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const data = await response.json();
+      setResults(data);
+    } catch (error) {
+      console.error("API Error:", error);
+      alert("Failed to fetch results.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleFetch();
+  }, []);
 
   return (
-    <div className="container mt-5">
-      <h1 className="mb-4 text-center">Query Results</h1>
-      {results.length === 0 ? (
-        <p className="text-center">No results found.</p>
-      ) : (
-        <table className="table table-bordered table-striped">
-          <thead className="table-dark">
-            <tr>
-              <th>Field Name</th>
-              <th>Condition</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(queryCondition).map((field) => (
-              <tr key={field}>
-                <td>{field}</td>
-                <td>{queryCondition[field].condition}</td>
-                <td>{queryCondition[field].value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <div className="text-center">
-        <button className="btn btn-danger mt-3" onClick={() => navigate("/")}>
-          🔙 Go Back
-        </button>
+    <div className="d-flex justify-content-center align-items-center vh-100">
+      <div className="container py-5" style={{ backgroundColor: "#f8f9fa" }}>
+        <div className="row justify-content-center">
+          <div className="col-lg-10">
+            <div className="card shadow-lg border-0 rounded-lg">
+              <div
+                className="card-header text-white text-center py-4 rounded-top"
+                style={{ backgroundColor: "#212529" }}
+              >
+                <h2 className="mb-0">Query Results</h2>
+              </div>
+              <div className="card-body p-4">
+                {results.length === 0 ? (
+                  <p className="text-center fs-5 py-5">No results found.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead style={{ backgroundColor: "#f8f9fa" }}>
+                        <tr>
+                          <th>Student Name</th>
+                          <th>ID</th>
+                          <th>Class</th>
+                          <th>Issue Date</th>
+                          <th>Book Name</th>
+                          <th>Author</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {results.map((item, index) => (
+                          <tr
+                            key={index}
+                            style={{
+                              backgroundColor:
+                                index % 2 === 0 ? "#fff" : "#f8f9fa",
+                            }}
+                          >
+                            <td>{item.FirstName || "-"}</td>
+                            <td>{item.StudentId || "-"}</td>
+                            <td>{item.Class || "-"}</td>
+                            <td>{item.IssueDate || "-"}</td>
+                            <td>{item.BookTitle || "-"}</td>
+                            <td>{item.Author || "-"}</td>
+                            <td>{item.Status || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              <div
+                className="card-footer d-flex justify-content-between p-4 rounded-bottom"
+                style={{ backgroundColor: "#f8f9fa" }}
+              >
+                <button
+                  className="btn text-white px-4 shadow-sm"
+                  onClick={() => navigate("/")}
+                  style={{ backgroundColor: "#212529", borderRadius: "4px" }}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>Go Back
+                </button>
+                {results.length > 0 && (
+                  <button
+                    className="btn text-white px-4 shadow-sm"
+                    onClick={exportToExcel}
+                    style={{ backgroundColor: "#212529", borderRadius: "4px" }}
+                  >
+                    <i className="bi bi-file-excel me-2"></i>Export to Excel
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
