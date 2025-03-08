@@ -15,7 +15,7 @@ const ResultPage = () => {
     try {
       const queryString = searchParams.toString();
       const response = await fetch(
-        `http://192.168.162.25:8000/api/student/?${queryString}`,
+        `http://localhost:8000/api/student/?${queryString}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
