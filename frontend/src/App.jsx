@@ -4,12 +4,10 @@ import ResultPage from "./ResultPage";
 
 function App() {
   return (
-    <div>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/results" element={<ResultPage />} />
-      </Routes>
-    </div>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/results" element={<ResultPage />} />
+    </Routes>
   );
 }
 
