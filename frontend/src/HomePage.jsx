@@ -5,11 +5,11 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   const [queryValues, setQueryValues] = useState({
-    FirstName: "",
-    Class: "",
-    StudentId: "",
-    Author: "",
-    Status: "", // Will be populated based on checkbox selection
+    Name: "",
+    grade: "",
+    studentId: "",
+    author: "",
+    status: "", // Will be populated based on checkbox selection
   });
 
   const [statusFilter, setStatusFilter] = useState({
@@ -63,7 +63,7 @@ const HomePage = () => {
   };
 
   // Fields to render as normal text inputs (excluding Status)
-  const textInputFields = ["FirstName", "Class", "StudentId", "Author"];
+  const textInputFields = ["Name", "Grade", "StudentId", "Author"];
 
   // CSS styles for custom black checkboxes
   const customCheckboxStyles = `

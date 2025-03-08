@@ -1,42 +1,134 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 const ResultPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  // const results = location.state?.results || [];
-  // 96;
-
   const [searchParams] = useSearchParams();
   const [data, setData] = useState([]);
+  const [expandedStudents, setExpandedStudents] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Function to fetch results using GET request
+  const handleFetch = async () => {
+    setLoading(true);
+    try {
+      const queryString = searchParams.toString();
+      const response = await fetch(
+        `http://192.168.162.25:8000/api/student/?${queryString}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API returned status: ${response.status}`);
+      }
+
+      const jsonData = await response.json();
+      console.log("API Response:", jsonData);
+
+      // For testing, you can use the sample data directly:
+      // const jsonData = [
+      //   {...} // your sample data here
+      // ];
+
+      setData(jsonData);
+      setError(null);
+    } catch (error) {
+      console.error("API Error:", error);
+      setError("Failed to fetch results: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleFetch();
+  }, [searchParams]);
+
+  // Toggle expanded state for a student row
+  const toggleStudentExpand = (id) => {
+    setExpandedStudents((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   // Function to handle exporting to Excel
   const exportToExcel = () => {
-    // Creating a table string that Excel can open
-    let tableHTML = "<table>";
+    if (data.length === 0) {
+      alert("No data to export");
+      return;
+    }
 
-    // Add header row
-    tableHTML += "<tr>";
-    tableHTML += "<th>Student Name</th>";
-    tableHTML += "<th>ID</th>";
-    tableHTML += "<th>Class</th>";
-    tableHTML += "<th>Issue Date</th>";
-    tableHTML += "<th>Book Name</th>";
-    tableHTML += "<th>Author</th>";
-    tableHTML += "<th>Status</th>";
-    tableHTML += "</tr>";
+    let tableHTML = "<table border='1'>";
 
-    // Add data rows
-    results.forEach((item) => {
-      tableHTML += "<tr>";
-      tableHTML += `<td>${item.FirstName || "-"}</td>`;
-      tableHTML += `<td>${item.StudentId || "-"}</td>`;
-      tableHTML += `<td>${item.Class || "-"}</td>`;
-      tableHTML += `<td>${item.IssueDate || "-"}</td>`;
-      tableHTML += `<td>${item.BookTitle || "-"}</td>`;
-      tableHTML += `<td>${item.Author || "-"}</td>`;
-      tableHTML += `<td>${item.Status || "-"}</td>`;
-      tableHTML += "</tr>";
+    // Add header row for students
+    tableHTML += `
+      <tr>
+        <th>Student Name</th>
+        <th>ID</th>
+        <th>Grade</th>
+        <th>Gender</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Number of Books</th>
+      </tr>
+    `;
+
+    // Add student data rows
+    data.forEach((student) => {
+      tableHTML += `
+        <tr>
+          <td>${student.name || "-"}</td>
+          <td>${student.id || "-"}</td>
+          <td>${student.grade || "-"}</td>
+          <td>${student.gender || "-"}</td>
+          <td>${student.email || "-"}</td>
+          <td>${student.phone || "-"}</td>
+          <td>${student.issued_books ? student.issued_books.length : 0}</td>
+        </tr>
+      `;
+
+      // Add book details for each student
+      if (student.issued_books && student.issued_books.length > 0) {
+        tableHTML += `
+          <tr>
+            <td colspan="7">
+              <table border='1' width='100%'>
+                <tr style="background-color: #f0f0f0;">
+                  <th>Book ID</th>
+                  <th>Title</th>
+                  <th>Author</th>
+                  <th>Genre</th>
+                  <th>Available Copies</th>
+                </tr>
+        `;
+
+        student.issued_books.forEach((book) => {
+          tableHTML += `
+            <tr>
+              <td>${book.id || "-"}</td>
+              <td>${book.title || "-"}</td>
+              <td>${book.author || "-"}</td>
+              <td>${book.genre || "-"}</td>
+              <td>${
+                book.available_copies !== undefined
+                  ? book.available_copies
+                  : "-"
+              }</td>
+            </tr>
+          `;
+        });
+
+        tableHTML += `
+              </table>
+            </td>
+          </tr>
+        `;
+      }
     });
 
     tableHTML += "</table>";
@@ -46,36 +138,12 @@ const ResultPage = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "search_results.xls";
+    a.download = "student_library_records.xls";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
-
-  /// Function to fetch results using GET request
-  const handleFetch = async () => {
-    // setLoading(true);
-    try {
-      const queryString = searchParams.toString();
-      const response = await fetch(
-        `http://localhost:8000/api/student/?${queryString}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      const data = await response.json();
-      setData(data);
-    } catch (error) {
-      console.error("API Error:", error);
-      alert("Failed to fetch results.");
-    }
-  };
-
-  useEffect(() => {
-    handleFetch();
-  }, []);
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100">
@@ -87,44 +155,127 @@ const ResultPage = () => {
                 className="card-header text-white text-center py-4 rounded-top"
                 style={{ backgroundColor: "#212529" }}
               >
-                <h2 className="mb-0">Query Results</h2>
+                <h2 className="mb-0">Student Library Records</h2>
               </div>
               <div className="card-body p-4">
-                <div className="table-responsive">
-                  <table className="table table-hover">
-                    <thead style={{ backgroundColor: "#f8f9fa" }}>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>ID</th>
-                        <th>Class</th>
-                        <th>Issue Date</th>
-                        <th>Book Name</th>
-                        <th>Author</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {JSON.stringify(data)}
-                      {/* {results.map((item, index) => (
-                          <tr
-                            key={index}
-                            style={{
-                              backgroundColor:
-                                index % 2 === 0 ? "#fff" : "#f8f9fa",
-                            }}
-                          >
-                            <td>{item.FirstName || "-"}</td>
-                            <td>{item.StudentId || "-"}</td>
-                            <td>{item.Class || "-"}</td>
-                            <td>{item.IssueDate || "-"}</td>
-                            <td>{item.BookTitle || "-"}</td>
-                            <td>{item.Author || "-"}</td>
-                            <td>{item.Status || "-"}</td>
+                {loading ? (
+                  <div className="text-center p-4">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Loading data...</p>
+                  </div>
+                ) : error ? (
+                  <div className="alert alert-danger" role="alert">
+                    {error}
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead style={{ backgroundColor: "#f8f9fa" }}>
+                        <tr>
+                          <th></th>
+                          <th>Student Name</th>
+                          <th>ID</th>
+                          <th>Grade</th>
+                          <th>Gender</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Books</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.length > 0 ? (
+                          data.map((student, index) => (
+                            <>
+                              <tr
+                                key={student.id}
+                                style={{
+                                  backgroundColor:
+                                    index % 2 === 0 ? "#fff" : "#f8f9fa",
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => toggleStudentExpand(student.id)}
+                              >
+                                <td>
+                                  <i
+                                    className={`bi ${
+                                      expandedStudents[student.id]
+                                        ? "bi-chevron-down"
+                                        : "bi-chevron-right"
+                                    }`}
+                                  ></i>
+                                </td>
+                                <td>{student.name || "-"}</td>
+                                <td>{student.id || "-"}</td>
+                                <td>{student.grade || "-"}</td>
+                                <td>{student.gender || "-"}</td>
+                                <td>{student.email || "-"}</td>
+                                <td>{student.phone || "-"}</td>
+                                <td>
+                                  <span
+                                    className="badge rounded-pill"
+                                    style={{
+                                      backgroundColor: "black",
+                                      color: "white",
+                                    }}
+                                  >
+                                    {student.issued_books
+                                      ? student.issued_books.length
+                                      : 0}
+                                  </span>
+                                </td>
+                              </tr>
+                              {expandedStudents[student.id] &&
+                                student.issued_books &&
+                                student.issued_books.length > 0 && (
+                                  <tr>
+                                    <td colSpan="8" className="p-0">
+                                      <div className="bg-light p-3">
+                                        <h6 className="mb-2">Issued Books:</h6>
+                                        <table className="table table-sm table-bordered mb-0">
+                                          <thead className="table-secondary">
+                                            <tr>
+                                              <th>Book ID</th>
+                                              <th>Title</th>
+                                              <th>Author</th>
+                                              <th>Genre</th>
+                                              <th>Available Copies</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {student.issued_books.map(
+                                              (book) => (
+                                                <tr key={book.id}>
+                                                  <td>{book.id}</td>
+                                                  <td>{book.title}</td>
+                                                  <td>{book.author}</td>
+                                                  <td>{book.genre}</td>
+                                                  <td>
+                                                    {book.available_copies}
+                                                  </td>
+                                                </tr>
+                                              )
+                                            )}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                            </>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="8" className="text-center">
+                              No students found.
+                            </td>
                           </tr>
-                        ))} */}
-                    </tbody>
-                  </table>
-                </div>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               <div
                 className="card-footer d-flex justify-content-between p-4 rounded-bottom"
@@ -137,6 +288,23 @@ const ResultPage = () => {
                 >
                   <i className="bi bi-arrow-left me-2"></i>Go Back
                 </button>
+                <div>
+                  {/* <button
+                    className="btn btn-link"
+                    onClick={handleFetch}
+                    disabled={loading}
+                  >
+                    <i className="bi bi-arrow-clockwise me-1"></i> Refresh
+                  </button> */}
+                  <button
+                    className="btn btn-dark px-4 shadow-sm"
+                    onClick={exportToExcel}
+                    disabled={loading || data.length === 0}
+                  >
+                    <i className="bi bi-file-earmark-excel me-1"></i> Export to
+                    Excel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
