@@ -1,13 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 const ResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const results = location.state?.results || [];
-  96;
+  // const results = location.state?.results || [];
+  // 96;
 
   const [searchParams] = useSearchParams();
+  const [data, setData] = useState([]);
 
   // Function to handle exporting to Excel
   const exportToExcel = () => {
@@ -53,11 +54,11 @@ const ResultPage = () => {
 
   /// Function to fetch results using GET request
   const handleFetch = async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const queryString = searchParams.toString();
       const response = await fetch(
-        `http://localhost:8000/api/students/?${queryString}`,
+        `http://localhost:8000/api/student/?${queryString}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -65,12 +66,10 @@ const ResultPage = () => {
       );
 
       const data = await response.json();
-      setResults(data);
+      setData(data);
     } catch (error) {
       console.error("API Error:", error);
       alert("Failed to fetch results.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -91,24 +90,22 @@ const ResultPage = () => {
                 <h2 className="mb-0">Query Results</h2>
               </div>
               <div className="card-body p-4">
-                {results.length === 0 ? (
-                  <p className="text-center fs-5 py-5">No results found.</p>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table table-hover">
-                      <thead style={{ backgroundColor: "#f8f9fa" }}>
-                        <tr>
-                          <th>Student Name</th>
-                          <th>ID</th>
-                          <th>Class</th>
-                          <th>Issue Date</th>
-                          <th>Book Name</th>
-                          <th>Author</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {results.map((item, index) => (
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead style={{ backgroundColor: "#f8f9fa" }}>
+                      <tr>
+                        <th>Student Name</th>
+                        <th>ID</th>
+                        <th>Class</th>
+                        <th>Issue Date</th>
+                        <th>Book Name</th>
+                        <th>Author</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {JSON.stringify(data)}
+                      {/* {results.map((item, index) => (
                           <tr
                             key={index}
                             style={{
@@ -124,11 +121,10 @@ const ResultPage = () => {
                             <td>{item.Author || "-"}</td>
                             <td>{item.Status || "-"}</td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        ))} */}
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <div
                 className="card-footer d-flex justify-content-between p-4 rounded-bottom"
@@ -141,15 +137,6 @@ const ResultPage = () => {
                 >
                   <i className="bi bi-arrow-left me-2"></i>Go Back
                 </button>
-                {results.length > 0 && (
-                  <button
-                    className="btn text-white px-4 shadow-sm"
-                    onClick={exportToExcel}
-                    style={{ backgroundColor: "#212529", borderRadius: "4px" }}
-                  >
-                    <i className="bi bi-file-excel me-2"></i>Export to Excel
-                  </button>
-                )}
               </div>
             </div>
           </div>
