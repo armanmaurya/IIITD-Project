@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const [authors, setAuthors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [queryValues, setQueryValues] = useState({
     Name: "",
     grade: "",
     studentId: "",
-    author: "",
+    book: "",
     status: "", // Will be populated based on checkbox selection
   });
 
@@ -16,6 +19,30 @@ const HomePage = () => {
     returned: false,
     notReturned: false,
   });
+
+  const fetchAuthors = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("http://localhost:8000/api/books/");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch authors: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("Authors data:", data); // Debug log
+      setAuthors(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching authors:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch authors from the API when component mounts
+  useEffect(() => {
+    fetchAuthors();
+  }, []);
 
   const handleInputChange = (field, newValue) => {
     setQueryValues((prev) => ({
@@ -62,11 +89,11 @@ const HomePage = () => {
     navigate(`/results?${queryString}`);
   };
 
-  // Fields to render as normal text inputs (excluding Status)
-  const textInputFields = ["Name", "Grade", "StudentId", "Author"];
+  // Fields to render as normal text inputs (excluding Status and Author)
+  const textInputFields = ["Name", "Grade", "StudentId"];
 
-  // CSS styles for custom black checkboxes
-  const customCheckboxStyles = `
+  // CSS styles for custom black checkboxes and dropdown
+  const customStyles = `
     .custom-black-checkbox .form-check-input {
       border-color: #212529;
     }
@@ -78,11 +105,26 @@ const HomePage = () => {
       box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.25);
       border-color: #212529;
     }
+    .custom-select {
+      border-color: #dee2e6;
+      border-radius: 0.375rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: #212529;
+    }
+    .custom-select:focus {
+      border-color: #212529;
+      box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.25);
+    }
+    .custom-select option {
+      color: #212529;
+    }
   `;
 
   return (
     <div className="d-flex justify-content-center align-items-center vh-100">
-      <style>{customCheckboxStyles}</style>
+      <style>{customStyles}</style>
       <div className="container py-5" style={{ backgroundColor: "#f8f9fa" }}>
         <div className="row justify-content-center">
           <div className="col-lg-10">
@@ -135,11 +177,76 @@ const HomePage = () => {
                           </td>
                         </tr>
                       ))}
-                      {/* Status field with black checkboxes */}
+                      {/* Author dropdown field */}
                       <tr
                         style={{
                           backgroundColor:
                             textInputFields.length % 2 === 0
+                              ? "#fff"
+                              : "#f8f9fa",
+                        }}
+                      >
+                        <td
+                          className="align-middle fw-medium"
+                          style={{ color: "#212529" }}
+                        >
+                          Book
+                        </td>
+                        <td>
+                          <select
+                            className="form-select form-select-sm custom-select"
+                            value={queryValues.author}
+                            onChange={(e) =>
+                              handleInputChange("book", e.target.value)
+                            }
+                            disabled={loading}
+                            style={{ color: "#212529" }}
+                          >
+                            <option value="">Select Book</option>
+                            {authors && authors.length > 0 ? (
+                              authors.map((author, index) => (
+                                <option
+                                  key={index}
+                                  value={
+                                    typeof author === "object"
+                                      ? author.name || ""
+                                      : author
+                                  }
+                                  style={{ color: "#212529" }}
+                                >
+                                  {typeof author === "object"
+                                    ? author.name || "Unknown"
+                                    : author}
+                                </option>
+                              ))
+                            ) : (
+                              <option disabled value="">
+                                No books available
+                              </option>
+                            )}
+                          </select>
+                          {loading && (
+                            <div className="mt-1 text-muted small">
+                              <span
+                                className="spinner-border spinner-border-sm me-1"
+                                role="status"
+                                aria-hidden="true"
+                              ></span>
+                              Loading books...
+                            </div>
+                          )}
+                          {error && (
+                            <div className="mt-1 small text-danger">
+                              Error loading authors: {error}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                      {/* Status field with black checkboxes */}
+                      <tr
+                        style={{
+                          backgroundColor:
+                            (textInputFields.length + 1) % 2 === 0
                               ? "#fff"
                               : "#f8f9fa",
                         }}
