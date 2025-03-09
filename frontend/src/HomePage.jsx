@@ -94,7 +94,7 @@ const HomePage = () => {
     // Update the Status value in queryValues based on selection
     let statusValue = "";
     if (newStatusFilter.returned) statusValue = "Returned";
-    if (newStatusFilter.notReturned) statusValue = "Not Returned";
+    if (newStatusFilter.notReturned) statusValue = "Non Returned";
 
     setQueryValues((prev) => ({
       ...prev,
