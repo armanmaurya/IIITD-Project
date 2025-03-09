@@ -4,8 +4,15 @@ import { useNavigate } from "react-router-dom";
 const HomePage = () => {
   const navigate = useNavigate();
   const [authors, setAuthors] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [studentNames, setStudentNames] = useState([]);
+  const [loading, setLoading] = useState({
+    books: false,
+    names: false,
+  });
+  const [error, setError] = useState({
+    books: null,
+    names: null,
+  });
 
   const [queryValues, setQueryValues] = useState({
     Name: "",
@@ -21,27 +28,47 @@ const HomePage = () => {
   });
 
   const fetchAuthors = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading((prev) => ({ ...prev, books: true }));
+    setError((prev) => ({ ...prev, books: null }));
     try {
-      const response = await fetch("http://localhost:8000/api/books/");
+      const response = await fetch("http://192.168.162.25:8000/api/books/");
       if (!response.ok) {
-        throw new Error(`Failed to fetch authors: ${response.status}`);
+        throw new Error(`Failed to fetch books: ${response.status}`);
       }
       const data = await response.json();
-      console.log("Authors data:", data); // Debug log
+      console.log("Books data:", data); // Debug log
       setAuthors(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching authors:", error);
-      setError(error.message);
+      console.error("Error fetching books:", error);
+      setError((prev) => ({ ...prev, books: error.message }));
     } finally {
-      setLoading(false);
+      setLoading((prev) => ({ ...prev, books: false }));
     }
   };
 
-  // Fetch authors from the API when component mounts
+  const fetchStudentNames = async () => {
+    setLoading((prev) => ({ ...prev, names: true }));
+    setError((prev) => ({ ...prev, names: null }));
+    try {
+      const response = await fetch("http://192.168.162.25:8000/api/names/");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch student names: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("Student names data:", data); // Debug log
+      setStudentNames(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching student names:", error);
+      setError((prev) => ({ ...prev, names: error.message }));
+    } finally {
+      setLoading((prev) => ({ ...prev, names: false }));
+    }
+  };
+
+  // Fetch data from the APIs when component mounts
   useEffect(() => {
     fetchAuthors();
+    fetchStudentNames();
   }, []);
 
   const handleInputChange = (field, newValue) => {
@@ -89,8 +116,8 @@ const HomePage = () => {
     navigate(`/results?${queryString}`);
   };
 
-  // Fields to render as normal text inputs (excluding Status and Author)
-  const textInputFields = ["Name", "Grade", "StudentId"];
+  // Fields to render as normal text inputs (excluding Name, Status and Book)
+  const textInputFields = ["Grade", "StudentId"];
 
   // CSS styles for custom black checkboxes and dropdown
   const customStyles = `
@@ -149,12 +176,71 @@ const HomePage = () => {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Name dropdown field */}
+                      <tr style={{ backgroundColor: "#fff" }}>
+                        <td
+                          className="align-middle fw-medium"
+                          style={{ color: "#212529" }}
+                        >
+                          Name
+                        </td>
+                        <td>
+                          <select
+                            className="form-select form-select-sm custom-select"
+                            value={queryValues.Name}
+                            onChange={(e) =>
+                              handleInputChange("Name", e.target.value)
+                            }
+                            disabled={loading.names}
+                            style={{ color: "#212529" }}
+                          >
+                            <option value="">Select Student Name</option>
+                            {studentNames && studentNames.length > 0 ? (
+                              studentNames.map((student, index) => (
+                                <option
+                                  key={index}
+                                  value={
+                                    typeof student === "object"
+                                      ? student.name || ""
+                                      : student
+                                  }
+                                  style={{ color: "#212529" }}
+                                >
+                                  {typeof student === "object"
+                                    ? student.name || "Unknown"
+                                    : student}
+                                </option>
+                              ))
+                            ) : (
+                              <option disabled value="">
+                                No student names available
+                              </option>
+                            )}
+                          </select>
+                          {loading.names && (
+                            <div className="mt-1 text-muted small">
+                              <span
+                                className="spinner-border spinner-border-sm me-1"
+                                role="status"
+                                aria-hidden="true"
+                              ></span>
+                              Loading names...
+                            </div>
+                          )}
+                          {error.names && (
+                            <div className="mt-1 small text-danger">
+                              Error loading names: {error.names}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+
                       {textInputFields.map((field, index) => (
                         <tr
                           key={field}
                           style={{
                             backgroundColor:
-                              index % 2 === 0 ? "#fff" : "#f8f9fa",
+                              index % 2 === 0 ? "#f8f9fa" : "#fff",
                           }}
                         >
                           <td
@@ -177,7 +263,8 @@ const HomePage = () => {
                           </td>
                         </tr>
                       ))}
-                      {/* Author dropdown field */}
+
+                      {/* Book dropdown field */}
                       <tr
                         style={{
                           backgroundColor:
@@ -195,11 +282,11 @@ const HomePage = () => {
                         <td>
                           <select
                             className="form-select form-select-sm custom-select"
-                            value={queryValues.author}
+                            value={queryValues.book}
                             onChange={(e) =>
                               handleInputChange("book", e.target.value)
                             }
-                            disabled={loading}
+                            disabled={loading.books}
                             style={{ color: "#212529" }}
                           >
                             <option value="">Select Book</option>
@@ -225,7 +312,7 @@ const HomePage = () => {
                               </option>
                             )}
                           </select>
-                          {loading && (
+                          {loading.books && (
                             <div className="mt-1 text-muted small">
                               <span
                                 className="spinner-border spinner-border-sm me-1"
@@ -235,18 +322,19 @@ const HomePage = () => {
                               Loading books...
                             </div>
                           )}
-                          {error && (
+                          {error.books && (
                             <div className="mt-1 small text-danger">
-                              Error loading authors: {error}
+                              Error loading books: {error.books}
                             </div>
                           )}
                         </td>
                       </tr>
+
                       {/* Status field with black checkboxes */}
                       <tr
                         style={{
                           backgroundColor:
-                            (textInputFields.length + 1) % 2 === 0
+                            (textInputFields.length + 2) % 2 === 0
                               ? "#fff"
                               : "#f8f9fa",
                         }}
